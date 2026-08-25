@@ -1,57 +1,39 @@
 import type { PluginContext } from "@getpaseo/plugin";
-import { defineRpc } from "@getpaseo/plugin/server";
-import { z } from "zod";
-import { ProbePanel } from "./probe.client";
-
-export const probeHello = defineRpc({
-  name: "linear-todo.probe.hello",
-  input: z.object({ from: z.string() }),
-  output: z.object({ ok: z.boolean() }),
-});
-
-function handleProbeHello({ from }: z.output<typeof probeHello.input>) {
-  console.log(`[probe] hello from ${from}`);
-  return { ok: true };
-}
+import { TodoPanel } from "./panel.client";
+import { listTodo, handoff } from "./contracts.shared";
+import { loadConfig } from "./config";
+import { addComment, listTodo as fetchTodo, startIssue } from "./linear";
 
 export default function contribute(plugin: PluginContext) {
-  plugin.handle(probeHello, handleProbeHello);
+  plugin.handle(listTodo, (input) => {
+    const { config, error } = loadConfig();
+    if (error) throw new Error(error);
+    return fetchTodo(config, input.refresh ?? false);
+  });
+
+  plugin.handle(handoff, async (input) => {
+    const { config, error } = loadConfig();
+    if (error) throw new Error(error);
+    try {
+      const moved = input.moveToStarted
+        ? await startIssue(config, input.teamId, input.issueId)
+        : false;
+      const commentAdded = input.comment.trim()
+        ? await addComment(config, input.issueId, input.comment.trim())
+        : false;
+      return { moved, commentAdded, error: null };
+    } catch (e) {
+      return { moved: false, commentAdded: false, error: (e as Error).message };
+    }
+  });
+
   plugin.addWorkspacePanel({
-    id: "probe",
-    title: "Spike probe",
-    icon: "FlaskConical",
+    id: "linear-todo",
+    title: "Linear todo",
+    icon: "ListTodo",
     context: "workspace",
-    Component: ProbePanel,
+    Component: TodoPanel,
   });
-  plugin.addCommandCenterItem({
-    id: "open-probe",
-    title: "Open spike probe",
-    icon: "FlaskConical",
-    context: "workspace",
-    onSelect({ openPanel }) {
-      openPanel("probe");
-    },
-  });
-  plugin.addCommandCenterItem({
-    id: "spawn-probe-agent",
-    title: "Spawn probe worktree agent",
-    icon: "Bug",
-    context: "workspace",
-    async onSelect({ paseo, workspace }) {
-      try {
-        const agent = await paseo.agents.create({
-          cwd: workspace.directory,
-          title: "spike-probe",
-          prompt: "Reply with exactly the word: probing",
-          config: { provider: "claude/sonnet-5" },
-          worktree: { mode: "branch-off", newBranch: "spike/linear-todo-probe" },
-          labels: { probe: "1" },
-        });
-        console.log(`[probe] agent spawned ${agent.id}`);
-      } catch (e) {
-        console.error(`[probe] spawn failed: ${(e as Error).message}`);
-      }
-    },
-  });
+
   return () => {};
 }
