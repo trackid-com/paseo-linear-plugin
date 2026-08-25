@@ -37,5 +37,16 @@ export default function contribute(plugin: PluginContext) {
     Component: TodoPanel,
   });
 
+  plugin.addCommandCenterItem({
+    id: "open-linear-todo",
+    title: "Open Linear todo",
+    icon: "ListTodo",
+    keywords: ["linear", "todo", "issues"],
+    context: "workspace",
+    onSelect({ openPanel }) {
+      openPanel("linear-todo");
+    },
+  });
+
   return () => {};
 }
