@@ -2,6 +2,7 @@ import { useRpc } from "@getpaseo/plugin";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   FlatList,
   Linking,
   Pressable,
@@ -40,6 +41,7 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<LinearIssue | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [appActive, setAppActive] = useState(() => AppState.currentState === "active");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(
@@ -64,12 +66,22 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
   );
 
   useEffect(() => {
+    const subscription = AppState.addEventListener("change", (next) => {
+      setAppActive(next === "active");
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (!appActive || selected) {
+      return;
+    }
     void refresh(true);
     timerRef.current = setInterval(() => void refresh(false), 60_000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [refresh]);
+  }, [refresh, appActive, selected]);
 
   const flash = useCallback((message: string) => {
     setStatus(message);
@@ -219,40 +231,52 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
         data={issues}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setSelected(item)}
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-          >
-            <View style={styles.row}>
-              <View style={styles.rowTop}>
+          <View style={styles.row}>
+            <View style={styles.rowTop}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setSelected(item)}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
                 <Text style={styles.identifier}>{item.identifier}</Text>
                 <Text style={styles.rowTitle} numberOfLines={2}>
                   {item.title}
                 </Text>
-                <Pressable
-                  accessibilityRole="link"
-                  onPress={() => void Linking.openURL(item.url).catch(() => {})}
-                  hitSlop={8}
-                >
-                  <View style={styles.link}>
-                    <Text style={styles.linkText}>↗</Text>
-                  </View>
-                </Pressable>
-              </View>
+              </Pressable>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => void Linking.openURL(item.url).catch(() => {})}
+                hitSlop={8}
+              >
+                <View style={styles.link}>
+                  <Text style={styles.linkText}>↗</Text>
+                </View>
+              </Pressable>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setSelected(item)}
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+            >
               <View style={styles.rowMeta}>
                 {item.priority > 0 ? (
                   <Text style={styles.metaChip}>{PRIORITY_LABEL[item.priority] ?? "Priority"}</Text>
                 ) : null}
                 <Text style={styles.metaChip}>{item.assignee?.name ?? "Unassigned"}</Text>
-                {item.labels.slice(0, 3).map((label) => (
-                  <Text key={label} style={styles.labelChip}>
+                {item.labels.slice(0, 3).map((label, index) => (
+                  <Text key={`${item.id}-${label}-${index}`} style={styles.labelChip}>
                     #{label}
                   </Text>
                 ))}
               </View>
-            </View>
-          </Pressable>
+            </Pressable>
+          </View>
         )}
         ListEmptyComponent={
           loading ? null : (

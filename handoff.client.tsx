@@ -157,6 +157,7 @@ export function HandoffSheet({
       await onConfirmed({ comment, moveToStarted: moveTo });
     } catch (e) {
       setFailure(`Hand-off failed: ${(e as Error).message}`);
+    } finally {
       setBusy(false);
     }
   };

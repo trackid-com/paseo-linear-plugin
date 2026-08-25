@@ -16,17 +16,26 @@ export default function contribute(plugin: PluginContext) {
   plugin.handle(handoff, async (input) => {
     const { config, error } = loadConfig();
     if (error) throw new Error(error);
+    let moved = false;
+    let commentAdded = false;
+    const warnings: string[] = [];
     try {
       console.log(`[linear-todo] handoff(issue=${input.issueId}, moveToStarted=${input.moveToStarted}, commentLen=${input.comment.length})`);
-      const moved = input.moveToStarted
-        ? await startIssue(config, input.teamId, input.issueId)
-        : false;
-      const commentAdded = input.comment.trim()
-        ? await addComment(config, input.issueId, input.comment.trim())
-        : false;
-      return { moved, commentAdded, error: null };
+      if (input.moveToStarted) {
+        moved = await startIssue(config, input.teamId, input.issueId);
+        if (!moved) {
+          warnings.push("Could not move issue — no started workflow state for this team.");
+        }
+      }
+      if (input.comment.trim()) {
+        commentAdded = await addComment(config, input.issueId, input.comment.trim());
+        if (!commentAdded) {
+          warnings.push("Could not add comment to issue.");
+        }
+      }
+      return { moved, commentAdded, error: warnings.length > 0 ? warnings.join(" ") : null };
     } catch (e) {
-      return { moved: false, commentAdded: false, error: (e as Error).message };
+      return { moved, commentAdded, error: (e as Error).message };
     }
   });
 

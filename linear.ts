@@ -15,7 +15,6 @@ export class LinearError extends Error {
 }
 
 interface ListQueryResult {
-  viewer?: { id: string } | null;
   teams?: { nodes: Array<{ id: string; key: string; name: string }> };
   issues?: { nodes: RawIssue[] };
 }
@@ -63,7 +62,7 @@ async function rawQuery<T>(
   return body.data;
 }
 
-function buildIssueFilter(config: LinearTodoConfig): string {
+function buildIssueFilter(config: LinearTodoConfig, viewerId: string | null): string {
   const parts: string[] = [];
   if (config.teamKeys?.length) {
     const keys = config.teamKeys.map((k) => JSON.stringify(k)).join(", ");
@@ -75,6 +74,12 @@ function buildIssueFilter(config: LinearTodoConfig): string {
   } else {
     parts.push('state: { type: { eq: "unstarted" } }');
   }
+  const assignee = config.assignee ?? "any";
+  if (assignee === "unassigned") {
+    parts.push("assignee: { null: true }");
+  } else if (assignee === "me" && viewerId) {
+    parts.push(`assignee: { id: { eq: ${JSON.stringify(viewerId)} } }`);
+  }
   return parts.join(", ");
 }
 
@@ -84,14 +89,12 @@ function rankPriority(priority: number): number {
   return PRIORITY_RANK[priority] ?? 4; // 0 (no priority) and unknowns sort last
 }
 
-function matchesAssignee(
-  issue: RawIssue,
-  assignee: NonNullable<LinearTodoConfig["assignee"]>,
-  viewerId: string | null,
-): boolean {
-  if (assignee === "any") return true;
-  if (assignee === "unassigned") return !issue.assignee;
-  return Boolean(viewerId && issue.assignee?.id === viewerId);
+async function fetchViewerId(token: string): Promise<string | null> {
+  const data = await rawQuery<{ viewer?: { id: string } | null }>(
+    token,
+    `query ViewerId { viewer { id } }`,
+  );
+  return data.viewer?.id ?? null;
 }
 
 interface ListCacheEntry {
@@ -117,6 +120,8 @@ function configCacheKey(config: LinearTodoConfig, token: string): string {
     config.statusNames ?? null,
     config.assignee ?? "any",
     config.limit ?? 50,
+    config.moveToStarted ?? true,
+    config.promptTemplate ?? null,
   ]);
 }
 
@@ -142,11 +147,19 @@ export async function listTodo(
   }
 
   const limit = Math.min(config.limit ?? 50, 200);
-  const filter = buildIssueFilter(config);
+  const assignee = config.assignee ?? "any";
+  let viewerId: string | null = null;
+  if (assignee === "me") {
+    viewerId = await fetchViewerId(token);
+    if (!viewerId) {
+      throw new LinearError("Could not resolve Linear viewer for assignee filter", 401);
+    }
+  }
+
+  const filter = buildIssueFilter(config, viewerId);
   const data = await rawQuery<ListQueryResult>(
     token,
     `query ListTodo($limit: Int!) {
-      viewer { id }
       teams { nodes { id key name } }
       issues(filter: { ${filter} }, orderBy: updatedAt, first: $limit) {
         nodes {
@@ -162,12 +175,7 @@ export async function listTodo(
     { limit },
   );
 
-  const viewerId = data.viewer?.id ?? null;
-  const assignee = config.assignee ?? "any";
-
-  const raw = (data.issues?.nodes ?? []).filter((i) => matchesAssignee(i, assignee, viewerId));
-
-  const issues: LinearIssue[] = raw
+  const issues: LinearIssue[] = (data.issues?.nodes ?? [])
     .sort((a, b) => {
       const pa = rankPriority(a.priority);
       const pb = rankPriority(b.priority);
@@ -245,7 +253,11 @@ export async function startIssue(
     }`,
     { issueId, stateId },
   );
-  return Boolean(data.issueUpdate?.success);
+  const success = Boolean(data.issueUpdate?.success);
+  if (!success) {
+    startedStateCache.delete(teamId);
+  }
+  return success;
 }
 
 export async function addComment(

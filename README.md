@@ -23,17 +23,23 @@ Requires Paseo plugins to be enabled (`pluginsEnabled: true` in
 
 Create `~/.paseo/plugins/linear-todo/config.json`:
 
-```jsonc
+```json
 {
-  "apiToken": "lin_api_…",   // your Linear personal API key
-  "teamKeys": ["ENG"],       // omit → every team the token can see
-  "statusNames": ["Todo"],   // optional; omit → state type "unstarted"
-  "assignee": "any",         // "any" | "me" | "unassigned"
+  "apiToken": "lin_api_…",
+  "teamKeys": ["ENG"],
+  "statusNames": ["Todo"],
+  "assignee": "any",
   "limit": 50,
   "moveToStarted": true,
-  "promptTemplate": "…"      // optional, overrides the built-in
+  "promptTemplate": "…"
 }
 ```
+
+`apiToken` — your Linear personal API key. `teamKeys` — omit to include every
+team the token can see. `statusNames` — optional; omit to use state type
+`unstarted`. `assignee` — `"any"`, `"me"`, or `"unassigned"`.
+`promptTemplate` — optional; overrides the built-in. Must be valid JSON (no
+comments).
 
 `chmod 600` the file. Alternatively set `LINEAR_API_TOKEN` in the daemon's
 environment and omit `apiToken` entirely.
@@ -71,7 +77,8 @@ Linear → Settings → My account → Security → **Personal API keys** → Cr
    message. The Linear write-back runs after the agent spawns, so a failed
    Linear update never costs you the hand-off — it just shows a toast.
 
-The list refreshes on mount, on manual ↻, and every 60s while it is visible.
+The list refreshes on mount, on manual ↻, and every 60s while the app is
+active and no hand-off sheet is open.
 
 ## Default prompt template
 
