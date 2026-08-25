@@ -8,6 +8,7 @@ export default function contribute(plugin: PluginContext) {
   plugin.handle(listTodo, (input) => {
     const { config, error } = loadConfig();
     if (error) throw new Error(error);
+    console.log(`[linear-todo] list(refresh=${input.refresh ?? false})`);
     return fetchTodo(config, input.refresh ?? false);
   });
 
@@ -15,6 +16,7 @@ export default function contribute(plugin: PluginContext) {
     const { config, error } = loadConfig();
     if (error) throw new Error(error);
     try {
+      console.log(`[linear-todo] handoff(issue=${input.issueId}, moveToStarted=${input.moveToStarted}, commentLen=${input.comment.length})`);
       const moved = input.moveToStarted
         ? await startIssue(config, input.teamId, input.issueId)
         : false;
