@@ -18,7 +18,9 @@ export function formatComments(issue: LinearIssue): string {
   }
   return issue.comments
     .map((c) => {
-      const when = c.createdAt ? ` (${new Date(c.createdAt).toISOString().slice(0, 10)})` : "";
+      const when = c.createdAt
+        ? ` (${new Date(c.createdAt).toISOString().slice(0, 10)})`
+        : "";
       return `- ${c.user ?? "unknown"}${when}: ${c.body}`;
     })
     .join("\n");
@@ -29,8 +31,13 @@ export function hydratePrompt(template: string, issue: LinearIssue): string {
     identifier: issue.identifier,
     title: issue.title,
     url: issue.url,
-    description: issue.description?.trim() ? issue.description : "(no description)",
+    description: issue.description?.trim()
+      ? issue.description
+      : "(no description)",
     comments: formatComments(issue),
   };
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) => values[key] ?? match);
+  return template.replace(
+    /\{\{(\w+)\}\}/g,
+    (match, key: string) => values[key] ?? match,
+  );
 }

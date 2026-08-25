@@ -9,9 +9,7 @@ export const linearIssue = z.object({
   url: z.string(),
   priority: z.number(),
   updatedAt: z.string(),
-  assignee: z
-    .object({ id: z.string(), name: z.string() })
-    .nullish(),
+  assignee: z.object({ id: z.string(), name: z.string() }).nullish(),
   labels: z.array(z.string()),
   state: z.object({ id: z.string(), name: z.string(), type: z.string() }),
   team: z.object({ id: z.string(), key: z.string() }),

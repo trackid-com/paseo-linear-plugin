@@ -1,9 +1,9 @@
 import type { PluginContext } from "@getpaseo/plugin";
+import { loadConfig } from "./config";
+import { handoff, listTodo } from "./contracts.shared";
+import { addComment, listTodo as fetchTodo, startIssue } from "./linear";
 import { TodoPanel } from "./panel.client";
 import { TodoSurface } from "./surface.client";
-import { listTodo, handoff } from "./contracts.shared";
-import { loadConfig } from "./config";
-import { addComment, listTodo as fetchTodo, startIssue } from "./linear";
 
 export default function contribute(plugin: PluginContext) {
   plugin.handle(listTodo, (input) => {
@@ -20,20 +20,32 @@ export default function contribute(plugin: PluginContext) {
     let commentAdded = false;
     const warnings: string[] = [];
     try {
-      console.log(`[linear-todo] handoff(issue=${input.issueId}, moveToStarted=${input.moveToStarted}, commentLen=${input.comment.length})`);
+      console.log(
+        `[linear-todo] handoff(issue=${input.issueId}, moveToStarted=${input.moveToStarted}, commentLen=${input.comment.length})`,
+      );
       if (input.moveToStarted) {
         moved = await startIssue(config, input.teamId, input.issueId);
         if (!moved) {
-          warnings.push("Could not move issue — no started workflow state for this team.");
+          warnings.push(
+            "Could not move issue — no started workflow state for this team.",
+          );
         }
       }
       if (input.comment.trim()) {
-        commentAdded = await addComment(config, input.issueId, input.comment.trim());
+        commentAdded = await addComment(
+          config,
+          input.issueId,
+          input.comment.trim(),
+        );
         if (!commentAdded) {
           warnings.push("Could not add comment to issue.");
         }
       }
-      return { moved, commentAdded, error: warnings.length > 0 ? warnings.join(" ") : null };
+      return {
+        moved,
+        commentAdded,
+        error: warnings.length > 0 ? warnings.join(" ") : null,
+      };
     } catch (e) {
       return { moved, commentAdded, error: (e as Error).message };
     }

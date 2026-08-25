@@ -1,6 +1,9 @@
-import { usePaseo } from "@getpaseo/plugin";
+import type {
+  PaseoProviderSnapshotResult,
+  PaseoWorkspace,
+} from "@getpaseo/client";
 import type { PluginSurfaceProps, PluginTheme } from "@getpaseo/plugin";
-import type { PaseoProviderSnapshotResult, PaseoWorkspace } from "@getpaseo/client";
+import { usePaseo } from "@getpaseo/plugin";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,7 +27,10 @@ type SheetProps = {
   moveToStarted: boolean;
   promptTemplate: string;
   onClose: () => void;
-  onConfirmed: (input: { comment: string; moveToStarted: boolean }) => Promise<void>;
+  onConfirmed: (input: {
+    comment: string;
+    moveToStarted: boolean;
+  }) => Promise<void>;
 };
 
 interface ModelChoice {
@@ -50,13 +56,16 @@ export function HandoffSheet({
 }: SheetProps) {
   const paseo = usePaseo();
 
-  const [prompt, setPrompt] = useState(() => hydratePrompt(promptTemplate, issue));
+  const [prompt, setPrompt] = useState(() =>
+    hydratePrompt(promptTemplate, issue),
+  );
   const [worktree, setWorktree] = useState(true);
   const [moveTo, setMoveTo] = useState(moveToStarted);
   const [models, setModels] = useState<ModelChoice[] | null>(null);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceChoice[] | null>(null);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceChoice | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] =
+    useState<WorkspaceChoice | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -98,7 +107,11 @@ export function HandoffSheet({
 
   useEffect(() => {
     if (workspaceDir) {
-      setSelectedWorkspace({ id: "fixed", directory: workspaceDir, label: workspaceDir });
+      setSelectedWorkspace({
+        id: "fixed",
+        directory: workspaceDir,
+        label: workspaceDir,
+      });
       setWorkspaces(null);
       return;
     }
@@ -133,7 +146,9 @@ export function HandoffSheet({
 
   const confirm = async () => {
     if (!selectedModel) {
-      setFailure("No provider model selected — configure a provider in Paseo first.");
+      setFailure(
+        "No provider model selected — configure a provider in Paseo first.",
+      );
       return;
     }
     if (!targetDir) {
@@ -148,7 +163,9 @@ export function HandoffSheet({
         title: `${issue.identifier} ${issue.title}`,
         prompt,
         config: { provider: selectedModel },
-        worktree: worktree ? { mode: "branch-off", newBranch: branch } : undefined,
+        worktree: worktree
+          ? { mode: "branch-off", newBranch: branch }
+          : undefined,
         labels: { linear: issue.identifier },
       });
       const comment = worktree
@@ -176,9 +193,23 @@ export function HandoffSheet({
         padding: layout.compact ? 14 : 20,
         maxHeight: "85%" as const,
       },
-      title: { color: theme.colors.foreground, fontSize: 16, fontWeight: "700" as const },
-      sub: { color: theme.colors.foregroundMuted, fontSize: 12, marginTop: 2, marginBottom: 10 },
-      label: { color: theme.colors.foregroundMuted, fontSize: 12, marginTop: 10, marginBottom: 4 },
+      title: {
+        color: theme.colors.foreground,
+        fontSize: 16,
+        fontWeight: "700" as const,
+      },
+      sub: {
+        color: theme.colors.foregroundMuted,
+        fontSize: 12,
+        marginTop: 2,
+        marginBottom: 10,
+      },
+      label: {
+        color: theme.colors.foregroundMuted,
+        fontSize: 12,
+        marginTop: 10,
+        marginBottom: 4,
+      },
       input: {
         color: theme.colors.foreground,
         backgroundColor: theme.colors.surface0,
@@ -190,7 +221,11 @@ export function HandoffSheet({
         minHeight: 110,
         textAlignVertical: "top" as const,
       },
-      chipRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 6 },
+      chipRow: {
+        flexDirection: "row" as const,
+        flexWrap: "wrap" as const,
+        gap: 6,
+      },
       chip: {
         paddingVertical: 6,
         paddingHorizontal: 10,
@@ -198,7 +233,10 @@ export function HandoffSheet({
         borderWidth: 1,
         borderColor: theme.colors.foregroundMuted,
       },
-      chipSelected: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+      chipSelected: {
+        backgroundColor: theme.colors.accent,
+        borderColor: theme.colors.accent,
+      },
       chipText: { color: theme.colors.foreground, fontSize: 12 },
       chipTextSelected: { color: theme.colors.accentForeground, fontSize: 12 },
       row: {
@@ -213,8 +251,17 @@ export function HandoffSheet({
         gap: 10,
         marginTop: 14,
       },
-      button: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: "center" as const },
-      cancel: { backgroundColor: theme.colors.surface0, borderWidth: 1, borderColor: theme.colors.foregroundMuted },
+      button: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: "center" as const,
+      },
+      cancel: {
+        backgroundColor: theme.colors.surface0,
+        borderWidth: 1,
+        borderColor: theme.colors.foregroundMuted,
+      },
       primary: { backgroundColor: theme.colors.accent },
       buttonText: { fontSize: 13, fontWeight: "700" as const },
       cancelText: { color: theme.colors.foreground },
@@ -227,7 +274,10 @@ export function HandoffSheet({
 
   return (
     <View style={styles.backdrop}>
-      <Pressable style={StyleSheet.absoluteFillObject} onPress={busy ? undefined : onClose} />
+      <Pressable
+        style={StyleSheet.absoluteFillObject}
+        onPress={busy ? undefined : onClose}
+      />
       <View style={styles.card}>
         <Text style={styles.title}>
           {issue.identifier}: {issue.title}
@@ -258,9 +308,18 @@ export function HandoffSheet({
               {models.map((model) => {
                 const selected = model.value === selectedModel;
                 return (
-                  <Pressable key={model.value} onPress={() => setSelectedModel(model.value)}>
-                    <View style={[styles.chip, selected && styles.chipSelected]}>
-                      <Text style={selected ? styles.chipTextSelected : styles.chipText}>
+                  <Pressable
+                    key={model.value}
+                    onPress={() => setSelectedModel(model.value)}
+                  >
+                    <View
+                      style={[styles.chip, selected && styles.chipSelected]}
+                    >
+                      <Text
+                        style={
+                          selected ? styles.chipTextSelected : styles.chipText
+                        }
+                      >
                         {model.label}
                       </Text>
                     </View>
@@ -276,15 +335,28 @@ export function HandoffSheet({
               {workspaces === null ? (
                 <ActivityIndicator color={theme.colors.accent} />
               ) : workspaces.length === 0 ? (
-                <Text style={styles.modelsEmpty}>No Paseo workspace available.</Text>
+                <Text style={styles.modelsEmpty}>
+                  No Paseo workspace available.
+                </Text>
               ) : (
                 <View style={styles.chipRow}>
                   {workspaces.map((ws) => {
                     const selected = ws.id === selectedWorkspace?.id;
                     return (
-                      <Pressable key={ws.id} onPress={() => setSelectedWorkspace(ws)}>
-                        <View style={[styles.chip, selected && styles.chipSelected]}>
-                          <Text style={selected ? styles.chipTextSelected : styles.chipText}>
+                      <Pressable
+                        key={ws.id}
+                        onPress={() => setSelectedWorkspace(ws)}
+                      >
+                        <View
+                          style={[styles.chip, selected && styles.chipSelected]}
+                        >
+                          <Text
+                            style={
+                              selected
+                                ? styles.chipTextSelected
+                                : styles.chipText
+                            }
+                          >
                             {ws.label}
                           </Text>
                         </View>
@@ -328,12 +400,21 @@ export function HandoffSheet({
               <Text style={[styles.buttonText, styles.cancelText]}>Cancel</Text>
             </View>
           </Pressable>
-          <Pressable onPress={() => void confirm()} disabled={busy} style={{ flex: 1 }}>
+          <Pressable
+            onPress={() => void confirm()}
+            disabled={busy}
+            style={{ flex: 1 }}
+          >
             <View style={[styles.button, styles.primary]}>
               {busy ? (
-                <ActivityIndicator size="small" color={theme.colors.accentForeground} />
+                <ActivityIndicator
+                  size="small"
+                  color={theme.colors.accentForeground}
+                />
               ) : (
-                <Text style={[styles.buttonText, styles.primaryText]}>Start agent</Text>
+                <Text style={[styles.buttonText, styles.primaryText]}>
+                  Start agent
+                </Text>
               )}
             </View>
           </Pressable>

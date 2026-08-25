@@ -17,14 +17,17 @@ export interface ConfigLoadResult {
   error?: string;
 }
 
-const CONFIG_DIR = (): string =>
-  path.join(
+function configDir(): string {
+  return path.join(
     process.env.PASEO_HOME ?? path.join(os.homedir(), ".paseo"),
     "plugins",
     "linear-todo",
   );
+}
 
-export const CONFIG_PATH = (): string => path.join(CONFIG_DIR(), "config.json");
+export function configPath(): string {
+  return path.join(configDir(), "config.json");
+}
 
 const ALLOWED_ASSIGNEE = new Set(["any", "me", "unassigned"]);
 
@@ -50,7 +53,11 @@ function sanitize(value: unknown): LinearTodoConfig {
   if (typeof raw.assignee === "string" && ALLOWED_ASSIGNEE.has(raw.assignee)) {
     config.assignee = raw.assignee as LinearTodoConfig["assignee"];
   }
-  if (typeof raw.limit === "number" && Number.isFinite(raw.limit) && raw.limit > 0) {
+  if (
+    typeof raw.limit === "number" &&
+    Number.isFinite(raw.limit) &&
+    raw.limit > 0
+  ) {
     config.limit = Math.min(Math.floor(raw.limit), 200);
   }
   if (typeof raw.moveToStarted === "boolean") {
@@ -74,15 +81,14 @@ const SHAPE = `{
 }`;
 
 export function loadConfig(): ConfigLoadResult {
-  const path = CONFIG_PATH();
+  const path = configPath();
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(path, "utf8"));
   } catch (e) {
-    const reason =
-      existsSync(path)
-        ? `not valid JSON (${(e as Error).message})`
-        : "file not found";
+    const reason = existsSync(path)
+      ? `not valid JSON (${(e as Error).message})`
+      : "file not found";
     return {
       config: {},
       error: `No Linear config at ${path} (${reason}). Create it with this shape:\n${SHAPE}\nchmod 600 the file.`,

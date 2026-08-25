@@ -118,10 +118,14 @@ multi-workspace/multi-token support, no marketplace distribution.
 ## Development
 
 ```sh
+npm run check        # biome lint + format check
+npm run format       # biome format --write
 npm run typecheck    # tsc --noEmit
 paseo plugin reload paseo-linear-todo
 paseo plugin logs paseo-linear-todo
 ```
+
+Suggested pre-commit check: `npm run check && npm run typecheck`.
 
 Source layout: `index.ts` (contributions + RPC handlers, runs unsandboxed in
 the daemon), `linear.ts` (GraphQL client), `config.ts`, `prompt.shared.ts`,

@@ -9,12 +9,17 @@ import {
   Text,
   View,
 } from "react-native";
-import { handoff, listTodo, type LinearIssue } from "./contracts.shared";
+import { handoff, type LinearIssue, listTodo } from "./contracts.shared";
 import { HandoffSheet } from "./handoff.client";
 
 const CONFIG_PATH_HINT = "~/.paseo/plugins/linear-todo/config.json";
 
-const PRIORITY_LABEL: Record<number, string> = { 1: "Urgent", 2: "High", 3: "Medium", 4: "Low" };
+const PRIORITY_LABEL: Record<number, string> = {
+  1: "Urgent",
+  2: "High",
+  3: "Medium",
+  4: "Low",
+};
 
 const CONFIG_ERROR_MARKERS = ["No Linear config", "config.json", "apiToken"];
 
@@ -41,7 +46,9 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<LinearIssue | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [appActive, setAppActive] = useState(() => AppState.currentState === "active");
+  const [appActive, setAppActive] = useState(
+    () => AppState.currentState === "active",
+  );
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(
@@ -89,7 +96,10 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
   }, []);
 
   const handleConfirmed = useCallback(
-    async (issue: LinearIssue, input: { comment: string; moveToStarted: boolean }) => {
+    async (
+      issue: LinearIssue,
+      input: { comment: string; moveToStarted: boolean },
+    ) => {
       try {
         const result = await doHandoff({
           issueId: issue.id,
@@ -107,7 +117,9 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
           );
         }
       } catch (e) {
-        flash(`Agent spawned, but Linear write-back failed: ${(e as Error).message}`);
+        flash(
+          `Agent spawned, but Linear write-back failed: ${(e as Error).message}`,
+        );
       }
       setSelected(null);
       void refresh(true);
@@ -129,7 +141,11 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
         paddingVertical: layout.compact ? 6 : 10,
         paddingHorizontal: layout.compact ? 4 : 8,
       },
-      headerTitle: { color: theme.colors.foreground, fontSize: 15, fontWeight: "700" as const },
+      headerTitle: {
+        color: theme.colors.foreground,
+        fontSize: 15,
+        fontWeight: "700" as const,
+      },
       headerMeta: { color: theme.colors.foregroundMuted, fontSize: 12 },
       refreshButton: {
         flexDirection: "row" as const,
@@ -140,7 +156,11 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
         borderRadius: 8,
         backgroundColor: theme.colors.accent,
       },
-      refreshText: { color: theme.colors.accentForeground, fontSize: 13, fontWeight: "600" as const },
+      refreshText: {
+        color: theme.colors.accentForeground,
+        fontSize: 13,
+        fontWeight: "600" as const,
+      },
       row: {
         paddingVertical: layout.compact ? 8 : 10,
         paddingHorizontal: layout.compact ? 8 : 12,
@@ -153,7 +173,11 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
         alignItems: "center" as const,
         gap: 8,
       },
-      identifier: { color: theme.colors.accent, fontSize: 12, fontWeight: "700" as const },
+      identifier: {
+        color: theme.colors.accent,
+        fontSize: 12,
+        fontWeight: "700" as const,
+      },
       rowTitle: {
         color: theme.colors.foreground,
         fontSize: 14,
@@ -177,21 +201,34 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
         fontSize: 12,
       },
       empty: { padding: 24, alignItems: "center" as const },
-      emptyText: { color: theme.colors.foregroundMuted, fontSize: 13, textAlign: "center" as const },
+      emptyText: {
+        color: theme.colors.foregroundMuted,
+        fontSize: 13,
+        textAlign: "center" as const,
+      },
       errorText: { color: theme.colors.statusDanger, fontSize: 13 },
       hint: { color: theme.colors.foregroundMuted, fontSize: 12, marginTop: 4 },
-      status: { color: theme.colors.accent, fontSize: 12, textAlign: "center" as const, paddingBottom: 6 },
+      status: {
+        color: theme.colors.accent,
+        fontSize: 12,
+        textAlign: "center" as const,
+        paddingBottom: 6,
+      },
     }),
     [theme, layout.compact],
   );
 
-  const isConfigError = CONFIG_ERROR_MARKERS.some((marker) => error?.includes(marker));
+  const isConfigError = CONFIG_ERROR_MARKERS.some((marker) =>
+    error?.includes(marker),
+  );
 
   if (error) {
     return (
       <View style={styles.screen}>
         <Text style={styles.errorText}>{error}</Text>
-        {isConfigError ? <Text style={styles.hint}>Config lives at {CONFIG_PATH_HINT}.</Text> : null}
+        {isConfigError ? (
+          <Text style={styles.hint}>Config lives at {CONFIG_PATH_HINT}.</Text>
+        ) : null}
         <Pressable onPress={() => void refresh(true)}>
           <View style={[styles.refreshButton, { marginTop: 12 }]}>
             <Text style={styles.refreshText}>Retry</Text>
@@ -213,14 +250,23 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
             {loading
               ? "loading…"
               : `${issues.length} ${issues.length === 1 ? "issue" : "issues"}${
-                  state ? ` · updated ${new Date(state.fetchedAt).toLocaleTimeString()}` : ""
+                  state
+                    ? ` · updated ${new Date(state.fetchedAt).toLocaleTimeString()}`
+                    : ""
                 }`}
           </Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={() => void refresh(true)} disabled={loading}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void refresh(true)}
+          disabled={loading}
+        >
           <View style={styles.refreshButton}>
             {loading ? (
-              <ActivityIndicator size="small" color={theme.colors.accentForeground} />
+              <ActivityIndicator
+                size="small"
+                color={theme.colors.accentForeground}
+              />
             ) : null}
             <Text style={styles.refreshText}>↻</Text>
           </View>
@@ -266,11 +312,15 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
             >
               <View style={styles.rowMeta}>
                 {item.priority > 0 ? (
-                  <Text style={styles.metaChip}>{PRIORITY_LABEL[item.priority] ?? "Priority"}</Text>
+                  <Text style={styles.metaChip}>
+                    {PRIORITY_LABEL[item.priority] ?? "Priority"}
+                  </Text>
                 ) : null}
-                <Text style={styles.metaChip}>{item.assignee?.name ?? "Unassigned"}</Text>
-                {item.labels.slice(0, 3).map((label, index) => (
-                  <Text key={`${item.id}-${label}-${index}`} style={styles.labelChip}>
+                <Text style={styles.metaChip}>
+                  {item.assignee?.name ?? "Unassigned"}
+                </Text>
+                {item.labels.slice(0, 3).map((label) => (
+                  <Text key={`${item.id}-${label}`} style={styles.labelChip}>
                     #{label}
                   </Text>
                 ))}
@@ -282,7 +332,8 @@ export function TodoList({ theme, layout, workspaceDir }: TodoListProps) {
           loading ? null : (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
-                Nothing in the todo column. Pick up a Linear issue and it shows up here.
+                Nothing in the todo column. Pick up a Linear issue and it shows
+                up here.
               </Text>
             </View>
           )

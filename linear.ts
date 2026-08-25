@@ -1,5 +1,5 @@
-import type { LinearIssue, LinearTeam } from "./contracts.shared";
 import type { LinearTodoConfig } from "./config";
+import type { LinearIssue, LinearTeam } from "./contracts.shared";
 import { DEFAULT_PROMPT_TEMPLATE } from "./prompt.shared";
 
 const API_URL = "https://api.linear.app/graphql";
@@ -32,7 +32,11 @@ interface RawIssue {
   state: { id: string; name: string; type: string };
   team: { id: string; key: string };
   comments?: {
-    nodes: Array<{ body: string; user?: { name: string } | null; createdAt: string }>;
+    nodes: Array<{
+      body: string;
+      user?: { name: string } | null;
+      createdAt: string;
+    }>;
   };
 }
 
@@ -49,20 +53,27 @@ async function rawQuery<T>(
     },
     body: JSON.stringify({ query, variables }),
   });
-  const body = (await res.json().catch(() => null)) as
-    | { data?: T; errors?: Array<{ message: string }> }
-    | null;
+  const body = (await res.json().catch(() => null)) as {
+    data?: T;
+    errors?: Array<{ message: string }>;
+  } | null;
   if (!res.ok || body?.errors?.length) {
     const message = body?.errors?.[0]?.message ?? `HTTP ${res.status}`;
     throw new LinearError(`Linear API error: ${message}`, res.status);
   }
   if (!body?.data) {
-    throw new LinearError(`Linear API returned no data (HTTP ${res.status})`, res.status);
+    throw new LinearError(
+      `Linear API returned no data (HTTP ${res.status})`,
+      res.status,
+    );
   }
   return body.data;
 }
 
-function buildIssueFilter(config: LinearTodoConfig, viewerId: string | null): string {
+function buildIssueFilter(
+  config: LinearTodoConfig,
+  viewerId: string | null,
+): string {
   const parts: string[] = [];
   if (config.teamKeys?.length) {
     const keys = config.teamKeys.map((k) => JSON.stringify(k)).join(", ");
@@ -152,7 +163,10 @@ export async function listTodo(
   if (assignee === "me") {
     viewerId = await fetchViewerId(token);
     if (!viewerId) {
-      throw new LinearError("Could not resolve Linear viewer for assignee filter", 401);
+      throw new LinearError(
+        "Could not resolve Linear viewer for assignee filter",
+        401,
+      );
     }
   }
 
@@ -219,18 +233,25 @@ export async function listTodo(
   return payload;
 }
 
-async function startedStateId(token: string, teamId: string): Promise<string | null> {
+async function startedStateId(
+  token: string,
+  teamId: string,
+): Promise<string | null> {
   const cached = startedStateCache.get(teamId);
   if (cached) return cached;
 
-  const data = await rawQuery<{ team?: { states?: { nodes: Array<{ id: string; type: string }> } } | null }>(
+  const data = await rawQuery<{
+    team?: { states?: { nodes: Array<{ id: string; type: string }> } } | null;
+  }>(
     token,
     `query TeamStates($teamId: String!) {
       team(id: $teamId) { states { nodes { id type } } }
     }`,
     { teamId },
   );
-  const started = (data.team?.states?.nodes ?? []).find((s) => s.type === "started");
+  const started = (data.team?.states?.nodes ?? []).find(
+    (s) => s.type === "started",
+  );
   if (started) startedStateCache.set(teamId, started.id);
   return started?.id ?? null;
 }

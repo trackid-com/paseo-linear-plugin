@@ -3,9 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check .",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.10",
     "@getpaseo/client": "^0.4.0",
     "@tanstack/react-query": "^5.90.11",
     "@types/react": "~19.2.0",
