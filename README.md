@@ -47,14 +47,22 @@ Linear → Settings → My account → Security → **Personal API keys** → Cr
 
 ## Use
 
-1. Open the workspace panel: **⌘K → "Linear todo"**.
-2. The panel lists the configured team(s)' Todo column — unstarted issues,
+1. Open the todo list either way:
+   - **Side panel:** the plugin adds a **"Linear todo"** row to the Paseo side
+     panel — the list lives there as a surface, independent of the active
+     workspace.
+   - **Workspace panel:** **⌘K → "Open Linear todo"** opens it as a tab inside
+     the current workspace.
+2. The list shows the configured team(s)' Todo column — unstarted issues,
    priority first, then recently updated. Tap the ↗ on a row to open the issue
    in Linear.
 3. Tap a row to open the hand-off sheet:
    - **Prompt** — pre-filled from the issue (identifier, title, description,
      comments), fully editable before starting.
    - **Model** — pick any enabled provider model; defaults to Paseo's default.
+   - **Workspace** — shown when the sheet opens from the side-panel surface:
+     pick which Paseo workspace the agent should work in. When opened from a
+     workspace panel, the current workspace is used.
    - **New git worktree** — (default on) the agent starts in a fresh git
      worktree on a `linear/<identifier>` branch.
    - **Move to In Progress** — (default on, from config) flips the issue to the
@@ -63,8 +71,7 @@ Linear → Settings → My account → Security → **Personal API keys** → Cr
    message. The Linear write-back runs after the agent spawns, so a failed
    Linear update never costs you the hand-off — it just shows a toast.
 
-The list refreshes on mount, on manual ↻, and every 60s while the panel is
-visible.
+The list refreshes on mount, on manual ↻, and every 60s while it is visible.
 
 ## Default prompt template
 
@@ -111,5 +118,7 @@ paseo plugin logs paseo-linear-todo
 
 Source layout: `index.ts` (contributions + RPC handlers, runs unsandboxed in
 the daemon), `linear.ts` (GraphQL client), `config.ts`, `prompt.shared.ts`,
-`panel.client.tsx` (list) and `handoff.client.tsx` (sheet). The `*.client.tsx`
-files are excluded from the daemon bundle — clients only ever see RPC results.
+`todo-list.client.tsx` (shared list), `panel.client.tsx` (workspace panel
+wrapper), `surface.client.tsx` (side-panel surface) and `handoff.client.tsx`
+(sheet). The `*.client.tsx` files are excluded from the daemon bundle —
+clients only ever see RPC results.

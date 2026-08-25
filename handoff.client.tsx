@@ -1,6 +1,6 @@
-import type { PluginWorkspacePanelProps } from "@getpaseo/plugin";
-import { usePaseo, useWorkspace } from "@getpaseo/plugin";
-import type { PaseoProviderSnapshotResult } from "@getpaseo/client";
+import { usePaseo } from "@getpaseo/plugin";
+import type { PluginSurfaceProps, PluginTheme } from "@getpaseo/plugin";
+import type { PaseoProviderSnapshotResult, PaseoWorkspace } from "@getpaseo/client";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,8 +15,12 @@ import {
 import type { LinearIssue } from "./contracts.shared";
 import { hydratePrompt } from "./prompt.shared";
 
-type SheetProps = Pick<PluginWorkspacePanelProps, "theme" | "layout" | "workspaceId"> & {
+type SheetProps = {
+  theme: PluginTheme;
+  layout: { compact: boolean };
   issue: LinearIssue;
+  /** Fixed hand-off target directory (workspace panel). Absent → user picks a workspace. */
+  workspaceDir?: string;
   moveToStarted: boolean;
   promptTemplate: string;
   onClose: () => void;
@@ -28,24 +32,31 @@ interface ModelChoice {
   label: string;
 }
 
+interface WorkspaceChoice {
+  id: string;
+  directory: string;
+  label: string;
+}
+
 export function HandoffSheet({
   theme,
   layout,
-  workspaceId,
   issue,
+  workspaceDir,
   moveToStarted,
   promptTemplate,
   onClose,
   onConfirmed,
 }: SheetProps) {
   const paseo = usePaseo();
-  const workspace = useWorkspace(workspaceId, (w) => ({ directory: w.directory }));
 
   const [prompt, setPrompt] = useState(() => hydratePrompt(promptTemplate, issue));
   const [worktree, setWorktree] = useState(true);
   const [moveTo, setMoveTo] = useState(moveToStarted);
   const [models, setModels] = useState<ModelChoice[] | null>(null);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [workspaces, setWorkspaces] = useState<WorkspaceChoice[] | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceChoice | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -54,7 +65,7 @@ export function HandoffSheet({
     void (async () => {
       try {
         const snapshot = (await paseo.providers.snapshot({
-          cwd: workspace?.directory,
+          cwd: workspaceDir,
         })) as PaseoProviderSnapshotResult;
         const choices: ModelChoice[] = [];
         let fallback: string | null = null;
@@ -83,20 +94,57 @@ export function HandoffSheet({
     return () => {
       cancelled = true;
     };
-  }, [paseo, workspace?.directory]);
+  }, [paseo, workspaceDir]);
+
+  useEffect(() => {
+    if (workspaceDir) {
+      setSelectedWorkspace({ id: "fixed", directory: workspaceDir, label: workspaceDir });
+      setWorkspaces(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await paseo.workspaces.list();
+        const choices = (res.entries ?? [])
+          .map((w: PaseoWorkspace) => ({
+            id: w.id,
+            directory: w.workspaceDirectory ?? w.projectRootPath,
+            label: w.title ?? w.name ?? w.id,
+          }))
+          .filter((w: { directory: string }) => Boolean(w.directory));
+        if (!cancelled) {
+          setWorkspaces(choices);
+          setSelectedWorkspace((prev) => prev ?? choices[0] ?? null);
+        }
+      } catch {
+        if (!cancelled) setWorkspaces([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paseo, workspaceDir]);
 
   const branch = `linear/${issue.identifier}`;
+
+  const targetDir = workspaceDir ?? selectedWorkspace?.directory;
+  const targetLabel = workspaceDir ?? selectedWorkspace?.label;
 
   const confirm = async () => {
     if (!selectedModel) {
       setFailure("No provider model selected — configure a provider in Paseo first.");
       return;
     }
+    if (!targetDir) {
+      setFailure("Pick a workspace for the agent to work in.");
+      return;
+    }
     setBusy(true);
     setFailure(null);
     try {
       const agent = await paseo.agents.create({
-        cwd: workspace?.directory,
+        cwd: targetDir,
         title: `${issue.identifier} ${issue.title}`,
         prompt,
         config: { provider: selectedModel },
@@ -221,6 +269,32 @@ export function HandoffSheet({
             </View>
           )}
 
+          {!workspaceDir ? (
+            <>
+              <Text style={styles.label}>Workspace</Text>
+              {workspaces === null ? (
+                <ActivityIndicator color={theme.colors.accent} />
+              ) : workspaces.length === 0 ? (
+                <Text style={styles.modelsEmpty}>No Paseo workspace available.</Text>
+              ) : (
+                <View style={styles.chipRow}>
+                  {workspaces.map((ws) => {
+                    const selected = ws.id === selectedWorkspace?.id;
+                    return (
+                      <Pressable key={ws.id} onPress={() => setSelectedWorkspace(ws)}>
+                        <View style={[styles.chip, selected && styles.chipSelected]}>
+                          <Text style={selected ? styles.chipTextSelected : styles.chipText}>
+                            {ws.label}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </>
+          ) : null}
+
           <View style={styles.row}>
             <Text style={styles.rowLabel}>New git worktree</Text>
             <Switch
@@ -239,6 +313,10 @@ export function HandoffSheet({
               trackColor={{ true: theme.colors.accent }}
             />
           </View>
+
+          {targetLabel && !workspaceDir ? (
+            <Text style={styles.sub}>Agent will work in: {targetLabel}</Text>
+          ) : null}
 
           {failure ? <Text style={styles.failure}>{failure}</Text> : null}
         </ScrollView>
@@ -263,3 +341,5 @@ export function HandoffSheet({
     </View>
   );
 }
+
+export type TodoSurfaceProps = Pick<PluginSurfaceProps, "theme" | "layout">;

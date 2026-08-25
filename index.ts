@@ -1,5 +1,6 @@
 import type { PluginContext } from "@getpaseo/plugin";
 import { TodoPanel } from "./panel.client";
+import { TodoSurface } from "./surface.client";
 import { listTodo, handoff } from "./contracts.shared";
 import { loadConfig } from "./config";
 import { addComment, listTodo as fetchTodo, startIssue } from "./linear";
@@ -27,6 +28,15 @@ export default function contribute(plugin: PluginContext) {
     } catch (e) {
       return { moved: false, commentAdded: false, error: (e as Error).message };
     }
+  });
+
+  plugin.addSurface("linear-todo", TodoSurface);
+
+  plugin.addSidebarItem({
+    id: "linear-todo",
+    title: "Linear todo",
+    icon: "ListTodo",
+    surface: "linear-todo",
   });
 
   plugin.addWorkspacePanel({
